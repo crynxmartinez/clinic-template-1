@@ -886,18 +886,15 @@
                         tags: ['Doctor']
                     });
                     
-                    // Sign out the doctor and sign back in as admin
-                    await auth.signOut();
-                    
-                    // Reset flag
-                    isCreatingUser = false;
-                    
-                    // Show success and reload
+                    // Show success message FIRST
                     showToast(`✅ Doctor "${name}" created for ${CLINIC_NAME}!`, 'success');
                     closeModal();
                     
-                    // Reload to restore admin session
-                    setTimeout(() => window.location.reload(), 1000);
+                    // Sign out the doctor AFTER showing message
+                    await auth.signOut();
+                    
+                    // Reload immediately (before auth listener can redirect)
+                    window.location.reload();
                     
                 } catch (error) {
                     console.error('Error adding doctor:', error);
@@ -1457,18 +1454,15 @@
                         tags: ['Staff']
                     });
                     
-                    // Sign out the staff
-                    await auth.signOut();
-                    
-                    // Reset flag
-                    isCreatingUser = false;
-                    
-                    // Show success and reload
+                    // Show success message FIRST
                     showToast(`✅ Staff "${name}" created for ${CLINIC_NAME}!`, 'success');
                     closeModal();
                     
-                    // Reload to restore admin session
-                    setTimeout(() => window.location.reload(), 1000);
+                    // Sign out the staff AFTER showing message
+                    await auth.signOut();
+                    
+                    // Reload immediately (before auth listener can redirect)
+                    window.location.reload();
                     
                 } catch (error) {
                     console.error('Error adding staff:', error);
