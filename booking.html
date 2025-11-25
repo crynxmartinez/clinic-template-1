@@ -666,6 +666,14 @@
             try {
                 console.log('🔍 Loading services for doctor:', doctorId);
                 
+                // Debug: Check all services in database
+                const allServicesSnap = await db.collection('services').get();
+                console.log('📊 Total services in database:', allServicesSnap.size);
+                allServicesSnap.forEach(doc => {
+                    const data = doc.data();
+                    console.log(`   Service: ${data.name}, doctorId: ${data.doctorId}, active: ${data.isActive || data.active}`);
+                });
+                
                 const snapshot = await db.collection('services')
                     .where('doctorId', '==', doctorId)
                     .where('active', '==', true)
