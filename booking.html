@@ -682,10 +682,12 @@
                     
                     allServices.forEach(service => {
                         const option = document.createElement('option');
-                        option.value = service.name;
-                        option.textContent = service.name;
+                        option.value = service.id;  // ✅ Store service ID instead of name
+                        option.textContent = `${service.name} - ${service.duration} min - ${service.currency || 'SAR'} ${service.price || 'Free'}`;
+                        option.dataset.duration = service.duration;
+                        option.dataset.price = service.price;
                         serviceSelect.appendChild(option);
-                        console.log('   ✅ Added service:', service.name);
+                        console.log('   ✅ Added service:', service.name, 'ID:', service.id);
                     });
                     
                     if (allServices.length === 0) {
