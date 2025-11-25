@@ -2196,7 +2196,15 @@
                     }
                 });
                 
+                // Update doctors collection
                 await db.collection('doctors').doc(doctorProfile.id).update({
+                    weeklySchedule: schedule,
+                    appointmentDuration: selectedDuration,
+                    bufferTime: selectedBuffer
+                });
+                
+                // ALSO update users collection for booking page
+                await db.collection('users').doc(currentUser.id).update({
                     weeklySchedule: schedule,
                     appointmentDuration: selectedDuration,
                     bufferTime: selectedBuffer
