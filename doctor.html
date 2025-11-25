@@ -1038,12 +1038,12 @@
                                         <i class="fas fa-sticky-note text-purple-600 mr-2"></i>Notes
                                     </h4>
                                     <div class="space-y-2">
-                                        ${apt.notes.map(note => `
+                                        ${Array.isArray(apt.notes) && apt.notes.length > 0 ? apt.notes.map(note => `
                                             <div class="bg-white p-2 rounded text-sm text-gray-700">
                                                 <p class="font-semibold">${note.author || 'Doctor'} - ${note.timestamp ? new Date(note.timestamp).toLocaleString() : ''}</p>
                                                 <p>${note.text}</p>
                                             </div>
-                                        `).join('')}
+                                        `).join('') : '<p class="text-gray-500 text-sm">No notes yet</p>'}
                                     </div>
                                 </div>
                             ` : ''}
