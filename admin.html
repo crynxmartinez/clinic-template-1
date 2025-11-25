@@ -488,6 +488,11 @@
                 return;
             }
             
+            // Skip all checks if we're creating a user
+            if (isCreatingUser) {
+                return;
+            }
+            
             try {
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (!userDoc.exists) {
