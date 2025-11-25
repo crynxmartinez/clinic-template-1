@@ -604,31 +604,8 @@
         let currentCalendarDate = new Date();
         let calendarAppointments = [];
         
-        function logout() {
-            sessionStorage.removeItem('adminLoggedIn');
-            sessionStorage.removeItem('adminUser');
-            localStorage.removeItem('currentUser');
-            window.location.href = 'https://app.gohighlevel.com/v2/preview/r4wEUsYy3OZOvxnYgc6i';
-        }
-        
-        function protectPage() {
-            const adminSession = sessionStorage.getItem('adminLoggedIn');
-            const userStr = localStorage.getItem('currentUser');
-            
-            if (adminSession === 'true') {
-                return true;
-            }
-            
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                if (user.role === 'superadmin') {
-                    return true;
-                }
-            }
-            
-            window.location.href = 'https://app.gohighlevel.com/v2/preview/r4wEUsYy3OZOvxnYgc6i';
-            return false;
-        }
+        // Logout function is already defined above (line 539-544)
+        // protectPage() removed - using Firebase auth instead
         
         function showToast(message, type = 'success') {
             const colors = { success: 'bg-green-500', error: 'bg-red-500', warning: 'bg-yellow-500', info: 'bg-blue-500' };
@@ -664,9 +641,8 @@
             if (section === 'analytics') loadAnalytics();
         }
         
-        if (protectPage()) {
-            loadDashboard();
-        }
+        // Firebase auth handles protection via onAuthStateChanged
+        // loadDashboard() is called after successful auth (line 528)
         
         async function loadDashboard() {
             try {

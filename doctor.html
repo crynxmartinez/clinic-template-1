@@ -599,18 +599,18 @@
             localStorage.removeItem('currentUser');
             sessionStorage.removeItem('adminLoggedIn');
             sessionStorage.removeItem('adminUser');
-            window.location.href = 'https://app.gohighlevel.com/v2/preview/r4wEUsYy3OZOvxnYgc6i';
+            window.location.href = 'login.html';
         }
         
         function protectPage(allowedRoles = []) {
             const user = getCurrentUser();
             if (!user) {
-                window.location.href = 'https://app.gohighlevel.com/v2/preview/r4wEUsYy3OZOvxnYgc6i';
+                window.location.href = 'login.html';
                 return null;
             }
             if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
                 showToast('You do not have permission to access this page', 'error');
-                setTimeout(() => window.location.href = 'https://app.gohighlevel.com/v2/preview/r4wEUsYy3OZOvxnYgc6i', 1500);
+                setTimeout(() => window.location.href = 'login.html', 1500);
                 return null;
             }
             return user;
