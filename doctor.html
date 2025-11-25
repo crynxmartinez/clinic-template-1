@@ -906,6 +906,9 @@
                             
                             console.log('=== KANBAN DRAG END ===');
                             
+                            // Reload kanban to update counters
+                            await loadKanban();
+                            
                         } catch (error) {
                             console.error('Error in onEnd handler:', error);
                             showToast('Error updating status', 'error');
