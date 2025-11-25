@@ -846,14 +846,23 @@
                     const password = document.getElementById('doctor-password').value;
                     const specialty = document.getElementById('doctor-specialty').value;
                     
-                    // Create Firebase Auth account (will auto-login as doctor)
-                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                    const doctorUid = userCredential.user.uid;
+                    // Check if email already exists
+                    const existingUser = await db.collection('users')
+                        .where('email', '==', email)
+                        .get();
                     
-                    // Create Firestore user document with CLINIC_ID
-                    await db.collection('users').doc(doctorUid).set({
+                    if (!existingUser.empty) {
+                        showToast('This email is already in use', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                        return;
+                    }
+                    
+                    // Create Firestore user document with CLINIC_ID (NO Firebase Auth)
+                    const userRef = await db.collection('users').add({
                         name: name,
                         email: email,
+                        password: password, // Store password in database
                         phone: phone,
                         role: 'doctor',
                         clinicId: CLINIC_ID, // ✅ THIS CLINIC ONLY
@@ -862,7 +871,8 @@
                     });
                     
                     // Create doctor profile with CLINIC_ID
-                    await db.collection('doctors').doc(doctorUid).set({
+                    await db.collection('doctors').doc(userRef.id).set({
+                        userId: userRef.id,
                         name: name,
                         email: email,
                         phone: phone,
@@ -884,15 +894,10 @@
                         tags: ['Doctor']
                     });
                     
-                    // Show success message FIRST
+                    // Show success message and refresh list - NO LOGOUT, NO RELOAD!
                     showToast(`✅ Doctor "${name}" created for ${CLINIC_NAME}!`, 'success');
                     closeModal();
-                    
-                    // Sign out the doctor AFTER showing message
-                    await auth.signOut();
-                    
-                    // Reload immediately (before auth listener can redirect)
-                    window.location.reload();
+                    loadDoctors(); // Just refresh the doctor list
                     
                 } catch (error) {
                     console.error('Error adding doctor:', error);
@@ -1424,14 +1429,23 @@
                     const select = document.getElementById('staff-doctors');
                     const assignedDoctors = Array.from(select.selectedOptions).map(opt => opt.value);
                     
-                    // Create Firebase Auth account (will auto-login as staff)
-                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                    const staffUid = userCredential.user.uid;
+                    // Check if email already exists
+                    const existingUser = await db.collection('users')
+                        .where('email', '==', email)
+                        .get();
                     
-                    // Create Firestore user document with CLINIC_ID
-                    await db.collection('users').doc(staffUid).set({
+                    if (!existingUser.empty) {
+                        showToast('This email is already in use', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                        return;
+                    }
+                    
+                    // Create Firestore user document with CLINIC_ID (NO Firebase Auth)
+                    await db.collection('users').add({
                         name: name,
                         email: email,
+                        password: password, // Store password in database
                         phone: phone,
                         role: 'staff',
                         clinicId: CLINIC_ID, // ✅ THIS CLINIC ONLY
@@ -1448,15 +1462,10 @@
                         tags: ['Staff']
                     });
                     
-                    // Show success message FIRST
+                    // Show success message and refresh list - NO LOGOUT, NO RELOAD!
                     showToast(`✅ Staff "${name}" created for ${CLINIC_NAME}!`, 'success');
                     closeModal();
-                    
-                    // Sign out the staff AFTER showing message
-                    await auth.signOut();
-                    
-                    // Reload immediately (before auth listener can redirect)
-                    window.location.reload();
+                    loadStaff(); // Just refresh the staff list
                     
                 } catch (error) {
                     console.error('Error adding staff:', error);
