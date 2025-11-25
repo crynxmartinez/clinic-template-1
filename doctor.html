@@ -460,8 +460,8 @@
                 
                 console.log('✅ Doctor authenticated:', userData.name, '- Clinic:', CLINIC_NAME);
                 
-                // Load dashboard
-                loadDashboard();
+                // Initialize page
+                initializePage();
                 
             } catch (error) {
                 console.error('Auth error:', error);
@@ -642,12 +642,6 @@
                     loadAvailability();
                 }
             }
-        }
-        
-        currentUser = protectPage(['doctor']);
-        if (currentUser) {
-            document.getElementById('user-name').textContent = currentUser.name;
-            initializePage();
         }
         
         async function initializePage() {
