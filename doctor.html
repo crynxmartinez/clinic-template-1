@@ -1837,9 +1837,22 @@
             const scheduleDiv = document.getElementById('weekly-schedule');
             scheduleDiv.innerHTML = days.map(day => {
                 const daySchedule = schedule[day];
-                const isEnabled = daySchedule && daySchedule.length > 0;
-                const amSchedule = daySchedule && daySchedule.find(s => s.period === 'am');
-                const pmSchedule = daySchedule && daySchedule.find(s => s.period === 'pm');
+                let isEnabled = daySchedule && daySchedule.length > 0;
+                let amSchedule = null;
+                let pmSchedule = null;
+                
+                // Handle both old and new data structures
+                if (daySchedule && daySchedule.length > 0) {
+                    // Check if it's the new format (with period property)
+                    if (daySchedule[0].period) {
+                        amSchedule = daySchedule.find(s => s.period === 'am');
+                        pmSchedule = daySchedule.find(s => s.period === 'pm');
+                    } else {
+                        // Old format - convert to AM schedule by default
+                        amSchedule = { start: daySchedule[0].start, end: daySchedule[0].end };
+                    }
+                }
+                
                 const amEnabled = !!amSchedule;
                 const pmEnabled = !!pmSchedule;
                 
