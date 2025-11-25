@@ -3354,13 +3354,20 @@
                 const apt = { id: aptDoc.id, ...aptDoc.data() };
                 const doctor = allDoctors.find(d => d.id === apt.doctorId);
                 
+                // Handle different time field formats
+                const startTime = apt.startTime || apt.time || apt.slot || 'N/A';
+                const endTime = apt.endTime || 'N/A';
+                let duration = apt.duration || null;
+                
                 // Get service info if available
                 let serviceInfo = '';
+                let serviceDuration = null;
                 if (apt.serviceId) {
                     try {
                         const serviceDoc = await db.collection('services').doc(apt.serviceId).get();
                         if (serviceDoc.exists) {
                             const service = serviceDoc.data();
+                            serviceDuration = service.duration;
                             const priceText = service.price ? `${service.currency || 'SAR'} ${service.price}` : 'Free';
                             serviceInfo = `
                                 <div class="bg-blue-50 rounded-lg p-4 mb-4">
@@ -3376,6 +3383,25 @@
                         }
                     } catch (error) {
                         console.error('Error loading service:', error);
+                    }
+                }
+                
+                // Use service duration if appointment duration is not set
+                if (!duration && serviceDuration) {
+                    duration = serviceDuration;
+                }
+                
+                // Calculate end time if we have start time and duration
+                let calculatedEndTime = endTime;
+                if (startTime !== 'N/A' && duration && endTime === 'N/A') {
+                    try {
+                        const [hours, minutes] = startTime.split(':');
+                        const startDate = new Date();
+                        startDate.setHours(parseInt(hours), parseInt(minutes), 0);
+                        startDate.setMinutes(startDate.getMinutes() + parseInt(duration));
+                        calculatedEndTime = startDate.toTimeString().slice(0, 5);
+                    } catch (error) {
+                        console.error('Error calculating end time:', error);
                     }
                 }
                 
@@ -3420,8 +3446,8 @@
                                 </h4>
                                 <div class="grid md:grid-cols-3 gap-3">
                                     <p class="text-sm text-gray-700"><strong>Date:</strong> ${apt.date}</p>
-                                    <p class="text-sm text-gray-700"><strong>Time:</strong> ${apt.startTime || 'N/A'} - ${apt.endTime || 'N/A'}</p>
-                                    <p class="text-sm text-gray-700"><strong>Duration:</strong> ${apt.duration || 'N/A'} min</p>
+                                    <p class="text-sm text-gray-700"><strong>Time:</strong> ${startTime} - ${calculatedEndTime}</p>
+                                    <p class="text-sm text-gray-700"><strong>Duration:</strong> ${duration || 'N/A'} min</p>
                                 </div>
                             </div>
                             
