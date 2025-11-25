@@ -433,10 +433,12 @@
                 
                 allServices.forEach(service => {
                     const option = document.createElement('option');
-                    option.value = service.name;
-                    option.textContent = service.name;
+                    option.value = service.id;  // ✅ Store service ID instead of name
+                    option.textContent = `${service.name} - ${service.duration} min - ${service.currency || 'SAR'} ${service.price || 'Free'}`;
+                    option.dataset.duration = service.duration;
+                    option.dataset.price = service.price;
                     serviceSelect.appendChild(option);
-                    console.log('   ✅ Added service:', service.name);
+                    console.log('   ✅ Added service:', service.name, 'ID:', service.id);
                 });
                 
                 if (allServices.length === 0) {
@@ -822,6 +824,48 @@
             try {
                 const bookingRef = generateBookingReference();
                 
+                // Get selected service details
+                const selectedServiceId = document.getElementById('patient-service').value;
+                const selectedService = allServices.find(s => s.id === selectedServiceId);
+                
+                if (!selectedService) {
+                    alert('Please select a service');
+                    submitBtn.disabled = false;
+                    submitText.classList.remove('hidden');
+                    submitSpinner.classList.add('hidden');
+                    return;
+                }
+                
+                // Calculate end time based on service duration
+                let endTime = 'N/A';
+                if (selectedService.duration) {
+                    try {
+                        const timeMatch = selectedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+                        if (timeMatch) {
+                            let hours = parseInt(timeMatch[1]);
+                            const minutes = parseInt(timeMatch[2]);
+                            const period = timeMatch[3];
+                            
+                            // Convert to 24-hour format
+                            if (period === 'PM' && hours !== 12) hours += 12;
+                            if (period === 'AM' && hours === 12) hours = 0;
+                            
+                            // Add duration
+                            const startMinutes = hours * 60 + minutes;
+                            const endMinutes = startMinutes + parseInt(selectedService.duration);
+                            const endHours = Math.floor(endMinutes / 60) % 24;
+                            const endMins = endMinutes % 60;
+                            
+                            // Convert back to 12-hour format
+                            const endPeriod = endHours >= 12 ? 'PM' : 'AM';
+                            const displayHours = endHours > 12 ? endHours - 12 : (endHours === 0 ? 12 : endHours);
+                            endTime = `${displayHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')} ${endPeriod}`;
+                        }
+                    } catch (error) {
+                        console.error('Error calculating end time:', error);
+                    }
+                }
+                
                 const appointmentData = {
                     userId: selectedDoctor.id,
                     doctorId: selectedDoctor.id,  // Keep for backward compatibility
@@ -835,9 +879,15 @@
                     date: formatDate(selectedDate),
                     time: selectedTime,
                     startTime: selectedTime,
+                    endTime: endTime,
+                    duration: selectedService.duration,
                     branch: selectedDoctor.branch || CLINIC_NAME,
-                    service: document.getElementById('patient-service').value,
-                    patientService: document.getElementById('patient-service').value,
+                    serviceId: selectedService.id,  // ✅ Store service ID
+                    serviceName: selectedService.name,  // ✅ Store service name
+                    service: selectedService.name,  // Keep for backward compatibility
+                    patientService: selectedService.name,  // Keep for backward compatibility
+                    servicePrice: selectedService.price || 0,
+                    serviceCurrency: selectedService.currency || 'SAR',
                     notes: document.getElementById('patient-notes').value,
                     status: 'booked',
                     bookingReference: bookingRef,
