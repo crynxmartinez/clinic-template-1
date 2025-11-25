@@ -187,9 +187,11 @@
             }, 3000);
         }
         
-        // Check if already logged in
+        // Check if already logged in (but not during active login process)
+        let isLoggingIn = false;
+        
         auth.onAuthStateChanged(async (user) => {
-            if (user) {
+            if (user && !isLoggingIn) {
                 try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
@@ -198,6 +200,9 @@
                         // CRITICAL: Check if user belongs to THIS clinic
                         if (userData.clinicId === CLINIC_ID) {
                             redirectByRole(userData);
+                        } else {
+                            // User doesn't belong to this clinic, sign them out
+                            await auth.signOut();
                         }
                     }
                 } catch (error) {
@@ -243,6 +248,9 @@
             loginSpinner.classList.remove('hidden');
             errorMessage.classList.add('hidden');
             
+            // Set flag to prevent onAuthStateChanged from interfering
+            isLoggingIn = true;
+            
             try {
                 // Sign in with Firebase
                 const userCredential = await auth.signInWithEmailAndPassword(email, password);
@@ -279,6 +287,7 @@
                 }, 1000);
                 
             } catch (error) {
+                isLoggingIn = false;
                 console.error('Login error:', error);
                 
                 let errorMsg = 'Login failed. Please try again.';
