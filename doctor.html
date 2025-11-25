@@ -752,6 +752,8 @@
         
         async function loadProfile() {
             try {
+                console.log('📋 Loading profile for user:', currentUser);
+                
                 // Display Doctor UID
                 document.getElementById('doctor-uid').textContent = currentUser.id;
                 
@@ -760,6 +762,9 @@
                 document.getElementById('profile-email').value = currentUser.email || '';
                 document.getElementById('profile-phone').value = currentUser.phone || '';
                 document.getElementById('profile-specialty').value = currentUser.specialty || '';
+                
+                console.log('📞 Phone:', currentUser.phone);
+                console.log('🏥 Specialty:', currentUser.specialty);
                 
                 // Load doctor profile data if exists
                 if (doctorProfile) {
