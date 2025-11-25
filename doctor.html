@@ -373,8 +373,9 @@
                         </div>
                     </div>
                     
-                    <button onclick="saveWeeklySchedule()" class="mt-6 w-full bg-gradient-to-r from-primary to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition font-semibold shadow-md">
-                        <i class="fas fa-save mr-2"></i>Save Schedule
+                    <button onclick="saveWeeklySchedule()" id="save-schedule-btn" class="mt-6 w-full bg-gradient-to-r from-primary to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition font-semibold shadow-md">
+                        <span id="save-schedule-text"><i class="fas fa-save mr-2"></i>Save Schedule</span>
+                        <span id="save-schedule-spinner" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Saving...</span>
                     </button>
                 </div>
                 
@@ -1705,8 +1706,9 @@
                             </div>
                             
                             <div class="flex space-x-2 pt-4 border-t">
-                                <button type="submit" class="flex-1 bg-gradient-to-r from-primary to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition font-semibold shadow-md">
-                                    <i class="fas fa-plus mr-2"></i>${t('Add to My Services')}
+                                <button type="submit" id="add-global-service-btn" class="flex-1 bg-gradient-to-r from-primary to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition font-semibold shadow-md">
+                                    <span id="add-global-service-text"><i class="fas fa-plus mr-2"></i>${t('Add to My Services')}</span>
+                                    <span id="add-global-service-spinner" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Adding...</span>
                                 </button>
                                 <button type="button" onclick="closeModal()" class="flex-1 bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition font-semibold">
                                     ${t('Cancel')}
@@ -1719,6 +1721,15 @@
                 
                 document.getElementById('add-global-service-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    
+                    // Show loading spinner
+                    const btn = document.getElementById('add-global-service-btn');
+                    const btnText = document.getElementById('add-global-service-text');
+                    const btnSpinner = document.getElementById('add-global-service-spinner');
+                    btn.disabled = true;
+                    btnText.classList.add('hidden');
+                    btnSpinner.classList.remove('hidden');
+                    
                     try {
                         const serviceData = {
                             doctorId: currentUser.id,
@@ -1745,6 +1756,11 @@
                     } catch (error) {
                         console.error('Error adding service:', error);
                         showToast('Error adding service', 'error');
+                        
+                        // Hide loading spinner on error
+                        btn.disabled = false;
+                        btnText.classList.remove('hidden');
+                        btnSpinner.classList.add('hidden');
                     }
                 });
             } catch (error) {
@@ -2137,6 +2153,14 @@
         }
         
         async function saveWeeklySchedule() {
+            // Show loading spinner
+            const btn = document.getElementById('save-schedule-btn');
+            const btnText = document.getElementById('save-schedule-text');
+            const btnSpinner = document.getElementById('save-schedule-spinner');
+            btn.disabled = true;
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            
             try {
                 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                 const schedule = {};
@@ -2182,10 +2206,20 @@
                 doctorProfile.appointmentDuration = selectedDuration;
                 doctorProfile.bufferTime = selectedBuffer;
                 
+                // Hide loading spinner
+                btn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+                
                 showToast('Schedule saved successfully! 🎉', 'success');
             } catch (error) {
                 console.error('Error saving schedule:', error);
                 showToast('Error saving schedule', 'error');
+                
+                // Hide loading spinner on error
+                btn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
             }
         }
         
