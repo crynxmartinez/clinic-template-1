@@ -500,10 +500,12 @@
 
         // Check if date has available doctors
         async function checkDateAvailability(date, dayDiv) {
-            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-            const hasAvailableDoctors = allDoctors.some(doctor => 
-                doctor.workingDays && doctor.workingDays.includes(dayName)
-            );
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            const hasAvailableDoctors = allDoctors.some(doctor => {
+                if (!doctor.weeklySchedule) return false;
+                const daySchedule = doctor.weeklySchedule[dayName];
+                return daySchedule && daySchedule.length > 0;
+            });
             
             if (hasAvailableDoctors) {
                 dayDiv.classList.add('available');
@@ -515,12 +517,14 @@
         // Select date
         async function selectDate(date) {
             selectedDate = date;
-            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
             
             // Filter doctors working on this day
-            const availableDoctors = allDoctors.filter(doctor => 
-                doctor.workingDays && doctor.workingDays.includes(dayName)
-            );
+            const availableDoctors = allDoctors.filter(doctor => {
+                if (!doctor.weeklySchedule) return false;
+                const daySchedule = doctor.weeklySchedule[dayName];
+                return daySchedule && daySchedule.length > 0;
+            });
             
             if (availableDoctors.length === 0) {
                 alert('No doctors available on this date. Please select another date.');
@@ -643,31 +647,27 @@
         // Generate time slots
         function generateTimeSlots(doctor) {
             const slots = [];
-            if (!doctor.workingHours) return slots;
+            if (!doctor.weeklySchedule || !selectedDate) return slots;
             
-            const start = doctor.workingHours.start || '09:00';
-            const end = doctor.workingHours.end || '20:00';
-            const duration = doctor.slotDuration || 60;
+            const dayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            const daySchedule = doctor.weeklySchedule[dayName];
             
-            let currentTime = parseTime(start);
-            const endTime = parseTime(end);
+            if (!daySchedule || daySchedule.length === 0) return slots;
             
-            while (currentTime < endTime) {
-                const timeStr = formatTime(currentTime);
+            const duration = doctor.appointmentDuration || 30;
+            const buffer = doctor.bufferTime || 10;
+            
+            // Generate slots for each period (AM/PM)
+            daySchedule.forEach(period => {
+                let currentTime = parseTime(period.start);
+                const endTime = parseTime(period.end);
                 
-                // Check if not in lunch break
-                if (doctor.workingHours.lunchBreak) {
-                    const lunchStart = parseTime(doctor.workingHours.lunchBreak.start);
-                    const lunchEnd = parseTime(doctor.workingHours.lunchBreak.end);
-                    if (currentTime >= lunchStart && currentTime < lunchEnd) {
-                        currentTime += duration;
-                        continue;
-                    }
+                while (currentTime < endTime) {
+                    const timeStr = formatTime(currentTime);
+                    slots.push(timeStr);
+                    currentTime += duration + buffer;
                 }
-                
-                slots.push(timeStr);
-                currentTime += duration;
-            }
+            });
             
             return slots;
         }
