@@ -475,8 +475,8 @@
         // Set clinic name in header
         document.getElementById('clinic-header-name').textContent = CLINIC_NAME;
         
-        // CRITICAL: Session and Clinic Access Check (DATABASE-ONLY)
-        async function checkSession() {
+        // Check if user is logged in
+        async function checkAuth() {
             const currentUserStr = localStorage.getItem('currentUser');
             
             if (!currentUserStr) {
@@ -512,15 +512,14 @@
                 loadDashboard();
                 
             } catch (error) {
-                console.error('Session error:', error);
-                alert('Session error. Please login again.');
+                console.error('Error:', error);
                 localStorage.removeItem('currentUser');
                 window.location.href = 'login.html';
             }
         }
         
-        // Check session on page load
-        checkSession();
+        // Check on page load
+        checkAuth();
         
         // Logout function
         function logout() {

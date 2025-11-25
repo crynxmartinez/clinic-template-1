@@ -377,8 +377,8 @@
         let currentUser = null;
         let selectedDoctorId = null;
         
-        // CRITICAL: Session and Clinic Access Check (DATABASE-ONLY)
-        function checkSession() {
+        // Check if user is logged in
+        function checkAuth() {
             const currentUserStr = localStorage.getItem('currentUser');
             
             if (!currentUserStr) {
@@ -414,15 +414,14 @@
                 loadDoctorSelection();
                 
             } catch (error) {
-                console.error('Session error:', error);
-                alert('Session error. Please login again.');
+                console.error('Error:', error);
                 localStorage.removeItem('currentUser');
                 window.location.href = 'login.html';
             }
         }
         
-        // Check session on page load
-        checkSession();
+        // Check on page load
+        checkAuth();
         
         // Logout function
         function logout() {
