@@ -826,10 +826,16 @@
                 
                 // Get selected service details
                 const selectedServiceId = document.getElementById('patient-service').value;
+                console.log('🔍 Selected Service ID:', selectedServiceId);
+                console.log('📋 All Services:', allServices);
+                
                 const selectedService = allServices.find(s => s.id === selectedServiceId);
+                console.log('✅ Found Service:', selectedService);
                 
                 if (!selectedService) {
-                    alert('Please select a service');
+                    console.error('❌ Service not found! ID:', selectedServiceId);
+                    console.error('Available service IDs:', allServices.map(s => s.id));
+                    alert('Please select a service. If you just selected one, please try refreshing the page (Ctrl+F5) and booking again.');
                     submitBtn.disabled = false;
                     submitText.classList.remove('hidden');
                     submitSpinner.classList.add('hidden');
