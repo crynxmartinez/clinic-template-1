@@ -51,15 +51,15 @@
     <!-- Toast Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
     
-    <!-- Home Button -->
-    <a href="index.html" class="fixed top-4 left-4 bg-white text-primary px-4 py-2 rounded-lg shadow-lg hover:bg-gray-100 transition font-semibold flex items-center space-x-2 z-50">
-        <i class="fas fa-home"></i>
-        <span>Home</span>
-    </a>
-    
-    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in relative">
+        <!-- Back to Home Link -->
+        <a href="index.html" class="absolute top-6 left-6 text-gray-400 hover:text-primary transition flex items-center space-x-1 text-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Home</span>
+        </a>
+        
         <!-- Logo -->
-        <div class="text-center mb-8">
+        <div class="text-center mb-8 mt-4">
             <div class="inline-block p-4 bg-primary rounded-full mb-4">
                 <i class="fas fa-tooth text-white text-4xl"></i>
             </div>
