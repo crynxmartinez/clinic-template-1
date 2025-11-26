@@ -2985,6 +2985,17 @@
         
         async function loadDoctorPatients() {
             try {
+                // Get all patients from Firestore patients collection
+                const patientsSnap = await db.collection('patients').get();
+                const patientsFromDB = {};
+                patientsSnap.docs.forEach(doc => {
+                    const data = doc.data();
+                    const key = data.phone || data.email;
+                    if (key) {
+                        patientsFromDB[key] = { firestoreId: doc.id, ...data };
+                    }
+                });
+                
                 // Get ONLY this doctor's appointments in this clinic
                 const appointmentsSnap = await db.collection('appointments')
                     .where('doctorId', '==', currentUser.id)
@@ -3000,13 +3011,23 @@
                     if (!patientKey) return;
                     
                     if (!patientsMap.has(patientKey)) {
+                        // Check if patient exists in Firestore patients collection
+                        const firestorePatient = patientsFromDB[patientKey] || patientsFromDB[apt.patientEmail] || patientsFromDB[apt.patientPhone];
+                        
                         patientsMap.set(patientKey, {
-                            id: `PAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                            id: firestorePatient?.firestoreId || `PAT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                            firestoreId: firestorePatient?.firestoreId || null,
                             name: apt.patientName,
                             email: apt.patientEmail,
                             phone: apt.patientPhone,
                             visits: [],
-                            clinicsVisited: new Set()
+                            clinicsVisited: new Set(),
+                            // Load saved data from Firestore
+                            medicalHistory: firestorePatient?.medicalHistory || {},
+                            bloodProfile: firestorePatient?.bloodProfile || {},
+                            dentalChart: firestorePatient?.dentalChart || {},
+                            treatmentPlans: firestorePatient?.treatmentPlans || [],
+                            files: firestorePatient?.files || {}
                         });
                     }
                     
@@ -3421,30 +3442,135 @@
         
         // ========== PATIENT PROFILE HELPER FUNCTIONS ==========
         
+        // Helper: Ensure patient exists in Firestore
+        async function ensurePatientInFirestore() {
+            if (!currentPatient) {
+                showToast('❌ No patient selected', 'error');
+                return null;
+            }
+            if (currentPatient.firestoreId) return currentPatient.firestoreId;
+            
+            try {
+                const newPatientRef = await db.collection('patients').add({
+                    name: currentPatient.name,
+                    email: currentPatient.email,
+                    phone: currentPatient.phone,
+                    medicalHistory: {},
+                    bloodProfile: {},
+                    dentalChart: { teeth: {} },
+                    treatmentPlans: [],
+                    files: { xrays: [], photos: [], documents: [], insurance: [] },
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                currentPatient.firestoreId = newPatientRef.id;
+                return newPatientRef.id;
+            } catch (error) {
+                console.error('Error creating patient:', error);
+                showToast('❌ Error creating patient record', 'error');
+                return null;
+            }
+        }
+        
         // Medical History Functions
         function sendMedicalForm(contact) {
             const formId = Math.random().toString(36).substr(2, 9);
             const formLink = `https://clinic-one-zeta.vercel.app/form/?type=medical&id=${formId}&contact=${encodeURIComponent(contact)}`;
             showToast(`📤 Form link generated: ${formLink}`, 'success');
-            console.log('Send medical form to:', contact, 'Link:', formLink);
         }
         
-        function addAllergy() {
+        async function addAllergy() {
             const allergy = prompt('Enter allergy name:');
-            if (allergy) {
-                showToast(`Added allergy: ${allergy}`, 'success');
+            if (!allergy) return;
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                await db.collection('patients').doc(patientId).update({
+                    'medicalHistory.allergies': firebase.firestore.FieldValue.arrayUnion(allergy),
+                    'medicalHistory.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                if (!currentPatient.medicalHistory.allergies) currentPatient.medicalHistory.allergies = [];
+                currentPatient.medicalHistory.allergies.push(allergy);
+                showPatientTab('medical');
+                showToast(`✅ Added allergy: ${allergy}`, 'success');
+            } catch (error) {
+                showToast('❌ Error adding allergy', 'error');
             }
         }
         
-        function addMedication() {
+        async function removeAllergy(allergy) {
+            const patientId = currentPatient?.firestoreId;
+            if (!patientId) return;
+            try {
+                await db.collection('patients').doc(patientId).update({
+                    'medicalHistory.allergies': firebase.firestore.FieldValue.arrayRemove(allergy)
+                });
+                currentPatient.medicalHistory.allergies = currentPatient.medicalHistory.allergies.filter(a => a !== allergy);
+                showPatientTab('medical');
+                showToast(`🗑️ Removed allergy: ${allergy}`, 'success');
+            } catch (error) {
+                showToast('❌ Error removing allergy', 'error');
+            }
+        }
+        
+        async function addMedication() {
             const medication = prompt('Enter medication name and dosage:');
-            if (medication) {
-                showToast(`Added medication: ${medication}`, 'success');
+            if (!medication) return;
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                await db.collection('patients').doc(patientId).update({
+                    'medicalHistory.medications': firebase.firestore.FieldValue.arrayUnion(medication),
+                    'medicalHistory.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                if (!currentPatient.medicalHistory.medications) currentPatient.medicalHistory.medications = [];
+                currentPatient.medicalHistory.medications.push(medication);
+                showPatientTab('medical');
+                showToast(`✅ Added medication: ${medication}`, 'success');
+            } catch (error) {
+                showToast('❌ Error adding medication', 'error');
             }
         }
         
-        function saveMedicalHistory() {
-            showToast('💾 Medical history saved successfully!', 'success');
+        async function removeMedication(medication) {
+            const patientId = currentPatient?.firestoreId;
+            if (!patientId) return;
+            try {
+                await db.collection('patients').doc(patientId).update({
+                    'medicalHistory.medications': firebase.firestore.FieldValue.arrayRemove(medication)
+                });
+                currentPatient.medicalHistory.medications = currentPatient.medicalHistory.medications.filter(m => m !== medication);
+                showPatientTab('medical');
+                showToast(`🗑️ Removed medication: ${medication}`, 'success');
+            } catch (error) {
+                showToast('❌ Error removing medication', 'error');
+            }
+        }
+        
+        async function saveMedicalHistory() {
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                const conditions = [];
+                document.querySelectorAll('#medical-conditions-list input[type="checkbox"]:checked').forEach(cb => conditions.push(cb.value));
+                const bloodType = document.getElementById('vital-blood-type')?.value || '';
+                const bloodPressure = document.getElementById('vital-blood-pressure')?.value || '';
+                const emergencyContact = document.getElementById('vital-emergency-contact')?.value || '';
+                const dentalConcerns = [];
+                document.querySelectorAll('#dental-concerns-list input[type="checkbox"]:checked').forEach(cb => dentalConcerns.push(cb.value));
+                
+                await db.collection('patients').doc(patientId).update({
+                    'medicalHistory.conditions': conditions,
+                    'medicalHistory.bloodType': bloodType,
+                    'medicalHistory.bloodPressure': bloodPressure,
+                    'medicalHistory.emergencyContact': emergencyContact,
+                    'medicalHistory.dentalConcerns': dentalConcerns,
+                    'medicalHistory.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showToast('💾 Medical history saved successfully!', 'success');
+            } catch (error) {
+                showToast('❌ Error saving medical history', 'error');
+            }
         }
         
         // Dental Chart Functions
@@ -3454,13 +3580,34 @@
             selectedToothNumber = toothNumber;
             document.getElementById('selected-tooth-number').textContent = toothNumber;
             document.getElementById('tooth-details').classList.remove('hidden');
+            const toothData = currentPatient?.dentalChart?.teeth?.[toothNumber];
+            if (toothData) {
+                document.getElementById('tooth-condition').value = toothData.condition || '';
+                document.getElementById('tooth-notes').value = toothData.notes || '';
+            } else {
+                document.getElementById('tooth-condition').value = '';
+                document.getElementById('tooth-notes').value = '';
+            }
         }
         
-        function saveToothData() {
+        async function saveToothData() {
             const condition = document.getElementById('tooth-condition').value;
             const notes = document.getElementById('tooth-notes').value;
-            showToast(`Saved data for tooth #${selectedToothNumber}`, 'success');
-            closeToothDetails();
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                await db.collection('patients').doc(patientId).update({
+                    [`dentalChart.teeth.${selectedToothNumber}`]: { condition, notes, updatedAt: new Date().toISOString() },
+                    'dentalChart.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                if (!currentPatient.dentalChart) currentPatient.dentalChart = { teeth: {} };
+                if (!currentPatient.dentalChart.teeth) currentPatient.dentalChart.teeth = {};
+                currentPatient.dentalChart.teeth[selectedToothNumber] = { condition, notes };
+                showToast(`✅ Saved data for tooth #${selectedToothNumber}`, 'success');
+                closeToothDetails();
+            } catch (error) {
+                showToast('❌ Error saving tooth data', 'error');
+            }
         }
         
         function closeToothDetails() {
@@ -3470,30 +3617,35 @@
             selectedToothNumber = null;
         }
         
-        // File Upload Functions
+        // File Upload Functions (Placeholder)
         function uploadFile(fileType) {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = fileType === 'xray' || fileType === 'photo' ? 'image/*' : '*/*';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    showToast(`✅ ${fileType} uploaded successfully!`, 'success');
-                }
-            };
-            input.click();
+            showToast(`📁 File upload requires Firebase Storage (Pro feature). File type: ${fileType}`, 'info');
         }
         
         // Treatment Plan Functions
-        function createTreatmentPlan() {
-            showToast('🆕 Treatment plan creation coming soon!', 'info');
+        async function createTreatmentPlan() {
+            const title = prompt('Enter treatment plan title:');
+            if (!title) return;
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                const newPlan = { id: `plan-${Date.now()}`, title, status: 'active', createdAt: new Date().toISOString(), procedures: [] };
+                await db.collection('patients').doc(patientId).update({
+                    treatmentPlans: firebase.firestore.FieldValue.arrayUnion(newPlan)
+                });
+                if (!currentPatient.treatmentPlans) currentPatient.treatmentPlans = [];
+                currentPatient.treatmentPlans.push(newPlan);
+                showPatientTab('treatment');
+                showToast(`✅ Created treatment plan: ${title}`, 'success');
+            } catch (error) {
+                showToast('❌ Error creating treatment plan', 'error');
+            }
         }
         
         // Form Link Functions
         function sendFormLink(formType, patientId, contact, patientName) {
             const formId = Math.random().toString(36).substr(2, 9);
             const formLink = `https://clinic-one-zeta.vercel.app/form/?type=${formType}&id=${formId}&patientId=${patientId}&contact=${encodeURIComponent(contact)}&name=${encodeURIComponent(patientName)}`;
-            
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
             modal.innerHTML = `
@@ -3517,19 +3669,118 @@
         
         // Blood Profile Functions
         function addDonationRecord() {
-            showToast('🩸 Donation record form coming soon!', 'info');
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">🩸 Add Donation Record</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-2xl"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="space-y-3">
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-2">Donation Date</label><input type="date" id="donation-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-2">Location</label><input type="text" id="donation-location" placeholder="e.g., Red Cross" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                        <div><label class="block text-sm font-semibold text-gray-700 mb-2">Volume (ml)</label><input type="number" id="donation-volume" value="450" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                    </div>
+                    <div class="flex space-x-2 mt-6">
+                        <button onclick="saveDonationRecord()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold"><i class="fas fa-save mr-2"></i>Save</button>
+                        <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition font-semibold">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
         }
         
-        function addBPReading() {
-            const systolic = prompt('Enter systolic (top number):');
-            const diastolic = prompt('Enter diastolic (bottom number):');
-            if (systolic && diastolic) {
-                showToast(`📈 Blood pressure ${systolic}/${diastolic} saved!`, 'success');
+        async function saveDonationRecord() {
+            const date = document.getElementById('donation-date').value;
+            const location = document.getElementById('donation-location').value;
+            const volume = document.getElementById('donation-volume').value;
+            if (!date) { showToast('❌ Please enter donation date', 'error'); return; }
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                const donation = { id: `donation-${Date.now()}`, date, location, volume: parseInt(volume) || 450, createdAt: new Date().toISOString() };
+                await db.collection('patients').doc(patientId).update({
+                    'bloodProfile.donations': firebase.firestore.FieldValue.arrayUnion(donation),
+                    'bloodProfile.lastDonation': date,
+                    'bloodProfile.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                if (!currentPatient.bloodProfile) currentPatient.bloodProfile = {};
+                if (!currentPatient.bloodProfile.donations) currentPatient.bloodProfile.donations = [];
+                currentPatient.bloodProfile.donations.push(donation);
+                document.querySelector('.fixed').remove();
+                showPatientTab('blood');
+                showToast('🩸 Donation record saved!', 'success');
+            } catch (error) {
+                showToast('❌ Error saving donation record', 'error');
             }
         }
         
-        function saveBloodProfile() {
-            showToast('💾 Blood profile saved successfully!', 'success');
+        function addBPReading() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">📈 Add Blood Pressure</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-2xl"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-sm font-semibold text-gray-700 mb-2">Systolic</label><input type="number" id="bp-systolic" placeholder="120" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700 mb-2">Diastolic</label><input type="number" id="bp-diastolic" placeholder="80" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 mt-6">
+                        <button onclick="saveBPReading()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-semibold"><i class="fas fa-save mr-2"></i>Save</button>
+                        <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition font-semibold">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        async function saveBPReading() {
+            const systolic = document.getElementById('bp-systolic').value;
+            const diastolic = document.getElementById('bp-diastolic').value;
+            if (!systolic || !diastolic) { showToast('❌ Please enter both values', 'error'); return; }
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                const reading = { id: `bp-${Date.now()}`, datetime: new Date().toISOString(), systolic: parseInt(systolic), diastolic: parseInt(diastolic) };
+                await db.collection('patients').doc(patientId).update({
+                    'bloodProfile.bpReadings': firebase.firestore.FieldValue.arrayUnion(reading),
+                    'bloodProfile.latestBP': `${systolic}/${diastolic}`,
+                    'bloodProfile.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                if (!currentPatient.bloodProfile) currentPatient.bloodProfile = {};
+                if (!currentPatient.bloodProfile.bpReadings) currentPatient.bloodProfile.bpReadings = [];
+                currentPatient.bloodProfile.bpReadings.push(reading);
+                document.querySelector('.fixed').remove();
+                showPatientTab('blood');
+                showToast(`📈 Blood pressure ${systolic}/${diastolic} saved!`, 'success');
+            } catch (error) {
+                showToast('❌ Error saving blood pressure', 'error');
+            }
+        }
+        
+        async function saveBloodProfile() {
+            const patientId = await ensurePatientInFirestore();
+            if (!patientId) return;
+            try {
+                const bloodType = document.getElementById('blood-type')?.value || '';
+                const rhFactor = document.getElementById('rh-factor')?.value || '';
+                const verified = document.getElementById('blood-verified')?.checked || false;
+                await db.collection('patients').doc(patientId).update({
+                    'bloodProfile.bloodType': bloodType,
+                    'bloodProfile.rhFactor': rhFactor,
+                    'bloodProfile.verified': verified,
+                    'bloodProfile.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showToast('💾 Blood profile saved successfully!', 'success');
+            } catch (error) {
+                showToast('❌ Error saving blood profile', 'error');
+            }
         }
         
         // Check on page load - MUST BE AT THE END after all functions are defined
