@@ -4783,6 +4783,13 @@
                     'bloodProfile.lastDonation': date,
                     'bloodProfile.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
                 });
+                // Log the change
+                await logPatientChange(patientId, {
+                    action: 'Added Blood Donation',
+                    category: 'blood_profile',
+                    details: `${date} at ${location} (${volume}ml)`,
+                    newValue: `${date} - ${location}`
+                });
                 if (!currentPatient.bloodProfile) currentPatient.bloodProfile = {};
                 if (!currentPatient.bloodProfile.donations) currentPatient.bloodProfile.donations = [];
                 currentPatient.bloodProfile.donations.push(donation);
@@ -4839,6 +4846,13 @@
                     'bloodProfile.bpReadings': firebase.firestore.FieldValue.arrayUnion(reading),
                     'bloodProfile.latestBP': `${systolic}/${diastolic}`,
                     'bloodProfile.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                // Log the change
+                await logPatientChange(patientId, {
+                    action: 'Added Blood Pressure Reading',
+                    category: 'blood_profile',
+                    details: `${systolic}/${diastolic} mmHg`,
+                    newValue: `${systolic}/${diastolic}`
                 });
                 if (!currentPatient.bloodProfile) currentPatient.bloodProfile = {};
                 if (!currentPatient.bloodProfile.bpReadings) currentPatient.bloodProfile.bpReadings = [];
@@ -4902,6 +4916,13 @@
                     'bloodProfile.latestSugar': parseInt(value),
                     'bloodProfile.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
                 });
+                // Log the change
+                await logPatientChange(patientId, {
+                    action: 'Added Blood Sugar Reading',
+                    category: 'blood_profile',
+                    details: `${value} mg/dL (${type})`,
+                    newValue: `${value} mg/dL`
+                });
                 if (!currentPatient.bloodProfile) currentPatient.bloodProfile = {};
                 if (!currentPatient.bloodProfile.sugarReadings) currentPatient.bloodProfile.sugarReadings = [];
                 currentPatient.bloodProfile.sugarReadings.push(reading);
@@ -4941,6 +4962,13 @@
                     'bloodProfile.rhFactor': rhFactor,
                     'bloodProfile.verified': verified,
                     'bloodProfile.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                });
+                // Log the change
+                await logPatientChange(patientId, {
+                    action: 'Updated Blood Profile',
+                    category: 'blood_profile',
+                    details: `Blood Type: ${bloodType}${rhFactor}, Verified: ${verified ? 'Yes' : 'No'}`,
+                    newValue: `${bloodType}${rhFactor}`
                 });
                 
                 // Update local currentPatient object
